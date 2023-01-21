@@ -1,10 +1,10 @@
-﻿using Oxide.Core;
+using Oxide.Core;
 using Oxide.Core.Plugins;
 using System.Linq;
 
 namespace Oxide.Plugins
 {
-    [Info("NoOffline", "RFC1920", "1.0.2")]
+    [Info("NoOffline", "RFC1920", "1.0.3")]
     [Description("Disables offline raid based on building privilege members, friends, clans, or teams")]
     class NoOffline : RustPlugin
     {
@@ -15,7 +15,7 @@ namespace Oxide.Plugins
         private object OnEntityTakeDamage(BaseCombatEntity entity, HitInfo hitinfo)
         {
             if (entity == null) return null;
-            if (hitinfo.damageTypes.GetMajorityDamageType().ToString() == "Decay") return null;
+            if (hitinfo.damageTypes.GetMajorityDamageType() == Rust.DamageType.Decay) return null;
 
             bool foundOnline = false;
             BuildingPrivlidge tc = entity.GetBuildingPrivilege();
@@ -25,15 +25,12 @@ namespace Oxide.Plugins
                 DoLog("Checking authorized players");
                 foreach (ulong playerid in tc.authorizedPlayers.Select(x => x.userid).ToArray())
                 {
-                    DoLog($"Checking player {playerid.ToString()}");
-                    BasePlayer player = BasePlayer.Find(playerid.ToString()) ?? null;
-                    if (player != null)
+                    DoLog($"Checking player {playerid}");
+                    BasePlayer player = BasePlayer.Find(playerid.ToString());
+                    if (player != null && BasePlayer.activePlayerList.Contains(player))
                     {
-                        if (BasePlayer.activePlayerList.Contains(player))
-                        {
-                            DoLog($"Damage allowed because an authorized player, {player.displayName}, is online.");
-                            foundOnline = true;
-                        }
+                        DoLog($"Damage allowed because an authorized player, {player.displayName}, is online.");
+                        foundOnline = true;
                     }
                     if (configData.Options.HonorRelationships)
                     {
@@ -48,7 +45,7 @@ namespace Oxide.Plugins
                     }
                 }
                 if (foundOnline) return null; // Normal behavior
-                else return true;
+                return true;
             }
 
             return null;
@@ -73,12 +70,9 @@ namespace Oxide.Plugins
             {
                 string playerclan = (string)Clans?.CallHook("GetClanOf", playerid);
                 string ownerclan = (string)Clans?.CallHook("GetClanOf", ownerid);
-                if (playerclan != null && ownerclan != null)
+                if (playerclan != null && ownerclan != null && playerclan == ownerclan)
                 {
-                    if (playerclan == ownerclan)
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
             if (configData.Options.useTeams)
@@ -88,13 +82,10 @@ namespace Oxide.Plugins
                 {
                     if (player.currentTeam != 0)
                     {
-                        RelationshipManager.PlayerTeam playerTeam = RelationshipManager.Instance.FindTeam(player.currentTeam);
-                        if (playerTeam != null)
+                        RelationshipManager.PlayerTeam playerTeam = RelationshipManager.ServerInstance.FindTeam(player.currentTeam);
+                        if (playerTeam != null && playerTeam.members.Contains(ownerid))
                         {
-                            if (playerTeam.members.Contains(ownerid))
-                            {
-                                return true;
-                            }
+                            return true;
                         }
                     }
                 }
@@ -116,7 +107,7 @@ namespace Oxide.Plugins
             Puts("Creating new config file.");
             ConfigData config = new ConfigData
             {
-                Version = Version,
+                Version = Version
             };
 
             SaveConfig(config);
@@ -134,11 +125,11 @@ namespace Oxide.Plugins
 
         public class Options
         {
-            public bool debug = false;
-            public bool useFriends = false;
-            public bool useClans = false;
-            public bool useTeams = false;
-            public bool HonorRelationships = false;
+            public bool debug;
+            public bool useFriends;
+            public bool useClans;
+            public bool useTeams;
+            public bool HonorRelationships;
         }
         #endregion
     }

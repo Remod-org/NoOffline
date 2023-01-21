@@ -1,5 +1,5 @@
 # NoOffline
-EXPERIMENTAL plugin to prevent offline raiding based on privilege owners, members, and friends of those players
+Prevent offline raiding based on privilege owners, members, and friends of those players
 
 This is not for use on PVE servers and/or servers using a PVE plugin.
 
